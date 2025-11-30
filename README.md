@@ -1,7 +1,13 @@
-### 🎥 Demo Video
+## Exercices
+### EX7
+Créer une VM de test, puis migrer la VM vers un autre hôte avec :  
+```
+./ex7 <nom_vm> <dest_uri>
+```
+## 🎥 Demo Video
 👉 [Clique ici pour voir la vidéo](./edit_demo.mp4)
 
-### Installation et Mise en Place de l’Environnement du mini-projet
+## Installation et Mise en Place de l’Environnement du mini-projet
 
 
 - Mise à jour du système:
