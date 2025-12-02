@@ -1,11 +1,16 @@
 ## Exercices
-Les exercices 1, 2, 3, 5 et 6 sont regroupés dans le fichier main.c.  
-Le fichier ex7.c contient la solution de l’exercice 7.
+Les exercices 1, 2, 3, 5 et 6 sont regroupés dans le fichier main.c.
+### EX7  
+Le fichier ex7.c contient la solution de l’exercice 7.   
+Créez une VM de test, puis migrez la VM vers un autre hôte avec :  
+```
+./ex7 <nom_vm> <dest_uri>
+```
 ## Mini projet
 ### 🎥 Demo Video
 👉 [Clique ici pour voir la vidéo](./demo.mp4)
 
-### Installation et Mise en Place de l’Environnement du mini-projet
+## Installation et Mise en Place de l’Environnement du mini-projet
 
 
 - Mise à jour du système:
