@@ -4,9 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 const char *HOST_URI = "qemu+ssh://user@172.19.3.1/system";
-/* ==========================================================
-   FONCTIONS COMMUNES
-   ========================================================== */
+const char *VM="vm10";
+
 
 /* Ouvre une connexion vers un hyperviseur donné */
 virConnectPtr openConnection(const char *uri) {
@@ -24,17 +23,13 @@ void closeConnection(virConnectPtr conn) {
     virConnectClose(conn);
 }
 
-/* ==========================================================
-   EXERCICE 1 — Connexion distante
-   ========================================================== */
+// *************** EX1 ***************** //
 void exercice1() {
     virConnectPtr conn = openConnection(HOST_URI);
     closeConnection(conn);
 }
 
-/* ==========================================================
-   EXERCICE 2 — Informations sur l’hôte
-   ========================================================== */
+// *************** EX2 ***************** //
 void printHostInfo(virConnectPtr conn) {
     char *host = virConnectGetHostname(conn);
     int vcpus = virConnectGetMaxVcpus(conn, NULL);
@@ -47,17 +42,13 @@ void printHostInfo(virConnectPtr conn) {
     free(host);
 }
 
-void exercice2() {
-    virConnectPtr conn = openConnection(HOST_URI);
-    printHostInfo(conn);
-    closeConnection(conn);
+void exercice2(virConnectPtr conn) {
+    printHostInfo(conn);    
 }
 
-/* ==========================================================
-   EXERCICE 3 — Liste des domaines
-   ========================================================== */
+// *************** EX3 ***************** //
 void printDomainsInfo(virConnectPtr conn) {
-    /* --- Domaines actifs --- */
+    // Domaines actifs 
     int numActive = virConnectNumOfDomains(conn);
     printf("Active domain IDs:\n");
 
@@ -84,7 +75,7 @@ void printDomainsInfo(virConnectPtr conn) {
         free(activeIDs);
     }
 
-    /* --- Domaines inactifs --- */
+    // Domaines inactifs
     printf("Inactive domain names:\n");
     int numInactive = virConnectNumOfDefinedDomains(conn);
     if (numInactive > 0) {
@@ -92,41 +83,32 @@ void printDomainsInfo(virConnectPtr conn) {
         virConnectListDefinedDomains(conn, inactiveNames, numInactive);
 
         for (int i = 0; i < numInactive; i++) {
-            printf("%s\n", inactiveNames[i]);
+            printf("   %s\n", inactiveNames[i]);
             free(inactiveNames[i]);
         }
         free(inactiveNames);
     }
 }
 
-/* Fonction principale Exercice 3 */
-void exercice3() {
-    virConnectPtr conn = openConnection(HOST_URI);
+void exercice3(virConnectPtr conn) {
     printHostInfo(conn);
     int encrypted = virConnectIsEncrypted(conn);
     printf("Connection is encrypted: %d\n", encrypted);
+    printf(">>> Liste des domaines\n");
     printDomainsInfo(conn);
-    closeConnection(conn);
 }
 
-/* ==========================================================
-   EXERCICE 5 — Arrêt et redémarrage d'une VM
-   ========================================================== */
-/* ==========================================================
-   EXERCICE 5 — Arrêt et redémarrage d'une VM
-   ========================================================== */
+// *************** EX5 ***************** //
 void stopVM(virConnectPtr conn, const char *vmName) {
     virDomainPtr dom = virDomainLookupByName(conn, vmName);
     if (dom == NULL) {
         printf("VM %s introuvable\n", vmName);
         return;
     }
-    printf(">>> Arrêt de %s (force)\n", vmName);
+    printf(">>> Arrêt de %s \n", vmName);
 
     int ret = virDomainDestroy(dom);  // arrêt brutal immédiat
-    if (ret == 0)
-        printf("VM %s arrêtée avec succès.\n", vmName);
-    else
+    if (ret != 0)
         printf("Échec de l'arrêt de %s.\n", vmName);
 
     virDomainFree(dom);
@@ -141,26 +123,23 @@ void startVM(virConnectPtr conn, const char *vmName) {
     printf(">>> Démarrage de %s\n", vmName);
 
     int ret = virDomainCreate(dom);
-    if (ret == 0)
-        printf("VM %s démarrée avec succès.\n", vmName);
-    else
+    if (ret != 0)
         printf("Échec du démarrage de %s.\n", vmName);
 
     virDomainFree(dom);
 }
 
-void exercice5() {
-    virConnectPtr conn = openConnection(HOST_URI);
-    stopVM(conn, "vm-debian13");
+void exercice5(virConnectPtr conn) {
+    
+    exercice3(conn);
+    stopVM(conn, VM);
+    printDomainsInfo(conn);
     sleep(3); // attendre un peu avant de redémarrer
-    startVM(conn, "vm-debian13");
-    closeConnection(conn);
+    startVM(conn, VM);
+    printDomainsInfo(conn);
 }
 
-
-/* ==========================================================
-   EXERCICE 6 — Suspendre et restaurer une VM
-   ========================================================== */
+// *************** EX6 ***************** //
 void suspendVM(virConnectPtr conn, const char *vmName) {
     virDomainPtr dom = virDomainLookupByName(conn, vmName);
     if (dom) {
@@ -179,66 +158,31 @@ void resumeVM(virConnectPtr conn, const char *vmName) {
     }
 }
 
-void exercice6() {
-    virConnectPtr conn = openConnection(HOST_URI);
-    suspendVM(conn, "vm-debian13");
+void exercice6(virConnectPtr conn) {
+    exercice5(conn);
+    suspendVM(conn, VM);
+    printDomainsInfo(conn);
     sleep(3);
-    resumeVM(conn, "vm-debian13");
-    closeConnection(conn);
-}
-/* ==========================================================
-   EXERCICE 7 — Migration d'une VM vers un autre hôte
-   ========================================================== */
-
-/* Fonction réutilisable : migration d'une VM vers un autre hôte */
-void migrateVM(virConnectPtr srcConn, const char *vmName, const char *destURI) {
-    virDomainPtr dom = virDomainLookupByName(srcConn, vmName);
-    if (dom == NULL) {
-        printf("VM %s introuvable sur l’hôte source\n", vmName);
-        return;
-    }
-
-    printf(">>> Migration de %s vers %s\n", vmName, destURI);
-
-    /* Flags pour la migration : LIVE + PERSISTENT */
-    unsigned long flags = VIR_MIGRATE_LIVE | VIR_MIGRATE_PERSIST_DEST;
-
-    int ret = virDomainMigrateToURI(dom, destURI, flags, NULL, 0);
-
-    if (ret == 0)
-        printf("✅ Migration de %s terminée avec succès.\n", vmName);
-    else
-        printf("❌ Échec de la migration de %s.\n", vmName);
-
-    virDomainFree(dom);
+    resumeVM(conn, VM);
+    printDomainsInfo(conn);
 }
 
-/* Fonction principale pour tester la migration */
-void exercice7() {
-    const char *DEST_URI = "qemu+ssh://user@172.19.3.20/system"; // <-- change l’IP du voisin ici
-
-    virConnectPtr srcConn = openConnection(HOST_URI); // hôte source
-    migrateVM(srcConn, "vm-debian13", DEST_URI);
-    closeConnection(srcConn);
-}
-
-/* ==========================================================
-   MAIN — Pour tester les exercices
-   ========================================================== */
+// *************** main ***************** //
 int main() {
-    // Décommente au fur et à mesure selon l'exercice à tester :
-    // printf("--------------exercice1----------------\n");
-    // exercice1();
-    // printf("--------------exercice2----------------\n");
-    // exercice2();
-    // printf("--------------exercice3----------------\n");
-    // exercice3();
-    // printf("--------------exercice5----------------\n");
-    // exercice5();
-    // printf("--------------exercice6----------------\n");
-    // exercice6();
-    printf("--------------exercice7----------------\n");
-    exercice7();
+    // Commentez/Décommentez au fur et à mesure selon l'exercice à tester :
+    printf("--------------exercice1----------------\n");
+    exercice1();
 
+    virConnectPtr conn = openConnection(HOST_URI);
+    printf("--------------exercice2----------------\n");
+    exercice2(conn);
+    printf("--------------exercice3----------------\n");
+    exercice3(conn);
+    printf("--------------exercice5----------------\n");
+    exercice5(conn);
+    printf("--------------exercice6----------------\n");
+    exercice6(conn);
+
+    closeConnection(conn);
     return 0;
 }

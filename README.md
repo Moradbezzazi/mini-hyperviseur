@@ -1,5 +1,9 @@
+## Exercices
+Les exercices 1, 2, 3, 5 et 6 sont regroupés dans le fichier main.c.  
+Le fichier ex7.c contient la solution de l’exercice 7.
+## Mini projet
 ### 🎥 Demo Video
-👉 [Clique ici pour voir la vidéo](./edit_demo.mp4)
+👉 [Clique ici pour voir la vidéo](./demo.mp4)
 
 ### Installation et Mise en Place de l’Environnement du mini-projet
 
