@@ -7,10 +7,7 @@
 
 #include <sys/types.h>  // pid_t
 #include <sys/wait.h>   // waitpid
-/*
- * Compile:
- * gcc -shared -fPIC libvirt_api.c -o libvirt_api.so -lvirt
- */
+
 const char* list_snapshots(const char *uri, const char *name) {
     static char buffer[65536];
     buffer[0] = '\0';
@@ -259,8 +256,7 @@ const char* create_vm(const char *uri, const char *name,
         return msg;
     }
 
-    /* ---------- 1) Créer le disque QCOW2 via libvirt ---------- */
-
+    /* ---------- Créer le disque QCOW2 via libvirt ---------- */
     virStoragePoolPtr pool = virStoragePoolLookupByName(conn, "default");
     if (!pool) {
         snprintf(msg, sizeof(msg), "Erreur : pool 'default' introuvable");
@@ -290,7 +286,7 @@ const char* create_vm(const char *uri, const char *name,
 
     char *disk_path = virStorageVolGetPath(vol);
 
-    /* ---------- 2) Générer le XML de la VM ---------- */
+    /* ---------- Générer le XML de la VM ---------- */
 
     char xml[4096];
     snprintf(xml, sizeof(xml),
@@ -323,7 +319,7 @@ const char* create_vm(const char *uri, const char *name,
         name, ram_mb, ram_mb, vcpu, disk_path, iso
     );
 
-    /* ---------- 3) Définir la VM ---------- */
+    /* ---------- Définir la VM ---------- */
 
     virDomainPtr dom = virDomainDefineXML(conn, xml);
     if (!dom) {
@@ -334,7 +330,7 @@ const char* create_vm(const char *uri, const char *name,
         return msg;
     }
 
-    /* ---------- 4) Démarrer la VM ---------- */
+    /* ---------- Démarrer la VM ---------- */
 
     if (virDomainCreate(dom) < 0) {
         snprintf(msg, sizeof(msg), "Erreur : impossible de démarrer la VM");
@@ -359,7 +355,6 @@ const char* create_vm(const char *uri, const char *name,
     return msg;
 }
 
-/* ---------- START / STOP / PAUSE / RESUME / DELETE ---------- */
 
 const char* start_vm(const char *uri, const char *name) {
     static char msg[512];
@@ -409,18 +404,7 @@ const char* resume_vm(const char *uri, const char *name) {
     return msg;
 }
 
-// const char* destroy_vm(const char *uri, const char *name) {
-//     static char msg[512];
-//     virConnectPtr conn = virConnectOpen(uri);
-//     virDomainPtr dom = virDomainLookupByName(conn, name);
 
-//     virDomainDestroy(dom);
-//     virDomainUndefine(dom);
-//     snprintf(msg, sizeof(msg), "VM %s supprimée.", name);
-//     virDomainFree(dom);
-//     virConnectClose(conn);
-//     return msg;
-// }
 const char* destroy_vm(const char *uri, const char *name) {
     static char msg[512];
 
@@ -437,7 +421,7 @@ const char* destroy_vm(const char *uri, const char *name) {
         return msg;
     }
 
-    // 1) Lire le XML pour identifier le disque
+    // Lire le XML pour identifier le disque
     char *xml = virDomainGetXMLDesc(dom, 0);
     char disk_path[512] = {0};
 
@@ -445,13 +429,13 @@ const char* destroy_vm(const char *uri, const char *name) {
     if (p)
         sscanf(p, "<source file='%511[^']'", disk_path);
 
-    // 2) Stopper la VM
+    // Stopper la VM
     virDomainDestroy(dom);
 
     // 3) Undefine
     virDomainUndefine(dom);
 
-    // 4) Supprimer le disque s’il existe
+    // Supprimer le disque s’il existe
     if (strlen(disk_path) > 0) {
         virStoragePoolPtr pool = virStoragePoolLookupByName(conn, "default");
         if (pool) {
@@ -471,14 +455,6 @@ const char* destroy_vm(const char *uri, const char *name) {
     snprintf(msg, sizeof(msg), "VM %s supprimée.", name);
     return msg;
 }
-
-/* ------------------------------------------------------------ */
-/*              OUVRIR LA CONSOLE VNC / SPICE                   */
-/* ------------------------------------------------------------ */
-/* ------------------------------------------------------------ */
-/*        CONSOLE VNC COMPATIBLE ANCIENNE VERSION LIBVIRT       */
-/* ------------------------------------------------------------ */
-
 
 const char* console_vm(const char *uri, const char *name) {
     static char msg[512];
@@ -519,7 +495,7 @@ const char* console_vm(const char *uri, const char *name) {
         }
     }
 
-    /* ⚡ Lance virt-viewer dans un process fils */
+    /* Lance virt-viewer dans un process fils */
     pid_t pid = fork();
     if (pid == 0) {
         execlp("virt-viewer", "virt-viewer", "--connect", uri, name, NULL);
@@ -584,12 +560,6 @@ const char* clone_vm(const char *uri, const char *srcName, const char *dstName) 
              oldDisk, newDisk);
     system(cmd);
 
-    /* Modifier le XML :
-       - changer le nom
-       - supprimer uuid
-       - remplacer ancien disque par nouveau
-    */
-
     char newXML[8192];
     strcpy(newXML, xml);
 
@@ -645,9 +615,6 @@ const char* clone_vm(const char *uri, const char *srcName, const char *dstName) 
     return msg;
 }
 
-/* ===================================================================== */
-/*                       MIGRATION D’UNE VM (UNSAFE)                     */
-/* ===================================================================== */
 char* migrate_vm(const char* src_uri, const char* name, const char* dest_uri)
 {
     virConnectPtr src = NULL;

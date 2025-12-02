@@ -16,7 +16,6 @@ lib.list_vms.restype = ctypes.c_char_p
 
 lib.create_vm.argtypes = [
     ctypes.c_char_p,  # uri
-    
     ctypes.c_char_p,  # name
     ctypes.c_char_p,  # ram
     ctypes.c_char_p,  # cpu
